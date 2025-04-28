@@ -18,6 +18,8 @@ import sys
 # ### Stretch Value
 # This function will equalizes the 'value' in HSV for images
 
+ATTACK_NAME = "Badnet"
+
 def stretch_value(img):
     flag=False
     if img.max()<=1.:
@@ -48,7 +50,7 @@ img=np.copy(X_train[ind,...])
 
 # choose source and target classes and run a sample poisoning
 
-mask_list = glob.glob("Data/Masks/*")
+mask_list = glob.glob("./Data/Masks/*")
 # for i in range(len(mask_list)):
 #     print(mask_list[i])
 source,target=(5,8)
@@ -68,8 +70,7 @@ plt.show()
 
 
 # Generate attacks for every pair of source and targets
-attacked_data_folder='./Attacked_Data/trainval'      # For training
-# attacked_data_folder='./Attacked_Data/test'       # For testing
+attacked_data_folder = f'./Attacked_Data/{ATTACK_NAME}/test'
 if not os.path.isdir(attacked_data_folder):
     os.makedirs(attacked_data_folder)
 count=0
@@ -78,8 +79,7 @@ for source in range(10):
     target_labels=np.concatenate([labels[:source],labels[source+1:]])
     for target in target_labels:
         # Save the attacked data
-        for k in range(0,10):      # for training
-        # for k in range(10,20):      # for testing
+        for k in range(10,20):      # for testing
             trigger=imread(mask_list[k])
             f=open(attacked_data_folder+'/backdoor%04d.pkl'%count,'wb')
             X_poisoned,Y_poisoned,trigger,ind=generate_poisoned_data(X_train,y_train,source,target,trigger)

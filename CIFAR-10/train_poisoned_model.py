@@ -1,13 +1,10 @@
 # Training poisoned models
-# Architecture - Modified VGG output classes = 10
 # Dataset - CIFAR-10
 
 import numpy as np
 from torch import optim
 from tqdm import tqdm
 
-
-import utils.model as model
 import pickle
 import time
 import glob
@@ -16,12 +13,16 @@ import random
 import sys
 import logging
 
+
 # ### Data loader
 #
 # The way I've implemented this is to have a loader for normal data and then load and append the poisoned data to it
 
 import torch
 from torch.utils import data
+from training_conf import TrainingConf
+
+
 
 
 #logging
@@ -132,10 +133,9 @@ class StratifiedSampler(torch.utils.data.Sampler):
 
 use_cuda=True
 batchsize=64
-init_num_filters=64
-inter_fc_dim=384
-nofclasses=10 #CIFAR10
 nof_epochs=50
+
+
 
 
 # ### Load clean data
@@ -147,8 +147,7 @@ val_loader=torch.utils.data.DataLoader(validation,batch_size=batchsize,shuffle=T
 
 # ### For a model for each attacked data (i.e. source target pairs that were saved in 01)
 
-# saveDir = './poisoned_models/trainval'
-saveDir = './poisoned_models/test'
+saveDir = f'./poisoned_models/{TrainingConf.attack_name}/{TrainingConf.model.architecture_name}/test'
 saveDirmeta = os.path.join(saveDir, 'meta')
 if not os.path.isdir(saveDir):
     os.makedirs(saveDir)
@@ -156,8 +155,7 @@ if not os.path.isdir(saveDir):
 if not os.path.exists(saveDirmeta):
     os.makedirs(saveDirmeta)
 
-# d=glob.glob('./Attacked_Data/trainval/*.pkl')
-d=glob.glob('./Attacked_Data/test/*.pkl')
+d = glob.glob(f'./Attacked_Data/{TrainingConf.attack_name}/test/*.pkl')
 random.seed(10)
 random.shuffle(d)
 crossentropy=torch.nn.CrossEntropyLoss()
@@ -166,9 +164,11 @@ val_labels=validation.labels.type(torch.LongTensor)
 partition = int(sys.argv[1])
 accuracy_val=list()
 runs=0
+max_runs = 10
+initial_run = 0
 poisoned_models = []
-while runs<100:
-    count = partition*100+runs
+while runs<max_runs:
+    count = partition*max_runs+runs+initial_run
     val_temp=0
     logging.info('Training model %d'%(count))
     X_poisoned,y_poisoned,trigger,source,target=pickle.load(open(d[count],'rb'))
@@ -180,10 +180,7 @@ while runs<100:
 
     sampler=StratifiedSampler(new_dataset.labels,batchsize)
     train_loader=torch.utils.data.DataLoader(new_dataset,batch_size=batchsize,sampler=sampler)
-    # train_loader=torch.utils.data.DataLoader(new_dataset,batch_size=batchsize, shuffle=True)  # without shuffling - ML class
-    cnn=model.CNN_classifier(init_num_filters=init_num_filters,
-                         inter_fc_dim=inter_fc_dim,nofclasses=nofclasses,
-                         nofchannels=3,use_stn=False)
+    cnn = TrainingConf.model()
 
     # Compute number of parameters
     s  = sum(np.prod(list(p.size())) for p in cnn.parameters())
@@ -225,7 +222,7 @@ while runs<100:
             val_accuracy=np.asarray(acc).mean()
             # Save the best model on the validation set
             if val_accuracy>=val_temp:
-                torch.save(cnn.state_dict(), saveDir+'/poisoned_vggmod_CIFAR-10_%04d.pt'%count)
+                torch.save(cnn.state_dict(), f"{saveDir}/poisoned_{cnn.architecture_name}_CIFAR-10_{count:04d}.pt")
                 val_temp=np.copy(val_accuracy)
 
     # Filter based on validation accuracy and poison accuracy
@@ -235,18 +232,14 @@ while runs<100:
     # poison_accuracy_ut=float((1.*(pred!=source)).sum().sitem())/float(pred.shape[0])
     logging.info("Max val acc:{:.3f} | Poison acc:{:.3f}".format(val_temp,poison_accuracy))
 
-    if val_temp>.75 and poison_accuracy>.90:
+    if val_temp > 0.75 and poison_accuracy > 0.90:
         # Doesn't save models that are not trained well
-        poisoned_models.append([saveDir+'/poisoned_vggmod_CIFAR-10_%04d.pt'%count,trigger,source,target,d[count]])
-        pickle.dump(poisoned_models,open(saveDirmeta + '/poisoned_model_list_CIFAR-10_{:02}.pkl'.format(partition),'wb'))
+        poisoned_models.append([f"{saveDir}/poisoned_{cnn.architecture_name}_CIFAR-10_{count:04d}.pt", trigger, source, target, d[count]])
+        pickle.dump(poisoned_models, open(f"{saveDirmeta}/poisoned_model_list_CIFAR-10_{partition:02}.pkl", 'wb'))
         accuracy_val.append(val_temp)
-        pickle.dump(accuracy_val,open(saveDirmeta + '/poisoned_validation_CIFAR-10_{:02}.pkl'.format(partition),'wb'))
-        runs+=1
+        pickle.dump(accuracy_val, open(f"{saveDirmeta}/poisoned_validation_CIFAR-10_{partition:02}.pkl", 'wb'))
+        runs += 1
+
 
     logging.info('Validation accuracy=%f%%'%(val_temp*100))
     torch.cuda.empty_cache()
-
-    # # save pkl for evaluation
-    # pkl_save.append(['./Trained_models_poisoned/CIFAR10/trained%04d.pt'%n, trigger, source, target])
-    # pickle.dump(pkl_save,open('poison_train_list_CIFAR10.pkl','wb'))
-

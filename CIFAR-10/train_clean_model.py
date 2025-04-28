@@ -7,7 +7,6 @@ import numpy as np
 from torch import optim
 from tqdm import tqdm
 
-import utils.model as model
 import pickle
 import time
 import os
@@ -17,6 +16,7 @@ import logging
 # ### Custom dataloader
 
 import torch
+from training_conf import TrainingConf
 from torch.utils import data
 
 #logging
@@ -105,10 +105,7 @@ class StratifiedSampler(torch.utils.data.Sampler):
 # ### Setting the hyper parameters
 
 use_cuda=True
-batchsize=64
-init_num_filters=64
-inter_fc_dim=384
-nofclasses=10           #CIFAR10
+batchsize=64         
 nof_epochs=50
 
 
@@ -124,7 +121,8 @@ val_loader=torch.utils.data.DataLoader(validation,batch_size=batchsize,shuffle=T
 
 # ### Start training
 
-trained_models_folder='./clean_models/trainval'
+trained_models_folder= f'./clean_models/{TrainingConf.model.architecture_name}/test' # './clean_models/trainval'
+
 # trained_models_folder='./clean_models/test'
 if not os.path.isdir(trained_models_folder):
     os.makedirs(trained_models_folder)
@@ -140,14 +138,14 @@ val_labels=validation.labels.type(torch.LongTensor)
 partition = int(sys.argv[1])
 # count=400
 runs=0
+max_runs = 10
+initial_run = 0
 accuracy_val=list()
-while runs<100:
-    count = partition*100+runs
+while runs<max_runs:
+    count = partition*max_runs+runs+initial_run
     val_temp=0
     logging.info('Training model %d'%(count))
-    cnn=model.CNN_classifier(init_num_filters=init_num_filters,
-                         inter_fc_dim=inter_fc_dim,nofclasses=nofclasses,
-                         nofchannels=3,use_stn=False)
+    cnn=TrainingConf.model()
 
     # Compute number of parameters
     s  = sum(np.prod(list(p.size())) for p in cnn.parameters())
@@ -184,7 +182,7 @@ while runs<100:
         val_accuracy=np.asarray(acc).mean()
         # Save the best model on the validation set
         if val_accuracy>=val_temp:
-            torch.save(cnn.state_dict(),trained_models_folder+'/clean_vggmod_CIFAR-10_%04d.pt'%count)
+            torch.save(cnn.state_dict(), f'{trained_models_folder}/clean_{cnn.architecture_name}_CIFAR-10_{count:04d}.pt')
             val_temp=np.copy(val_accuracy)
 #         logging.info('Validation accuracy= %f'%(100.*val_temp))
         # Print epoch status
