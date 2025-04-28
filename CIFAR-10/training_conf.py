@@ -1,7 +1,9 @@
 from utils.vgg_mod_model import VGG_MOD
 from utils.resnet_model import ResNet
+from utils.densenet_model import DenseNetCIFAR
 
 class TrainingConf:
-    mask_path = None # none for attacks where the mask isn't pregerenerated
-    attack_name = 'SIG'
-    model = VGG_MOD
+    available_attacks = ("SIG", "Badnet")
+    mask_path = None
+    attack_name = 'Badnet'
+    model = DenseNetCIFAR
