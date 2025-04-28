@@ -46,7 +46,7 @@ mask_list = glob.glob("./Data/Masks/*")
 attacked_data_folder = f'./Attacked_Data/{ATTACK_NAME}/test'
 if not os.path.isdir(attacked_data_folder):
     os.makedirs(attacked_data_folder)
-    
+
 count=0
 labels=np.arange(10)
 

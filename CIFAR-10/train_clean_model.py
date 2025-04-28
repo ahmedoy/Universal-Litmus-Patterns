@@ -138,7 +138,7 @@ val_labels=validation.labels.type(torch.LongTensor)
 partition = int(sys.argv[1])
 # count=400
 runs=0
-max_runs = 10
+max_runs = 100
 initial_run = 0
 accuracy_val=list()
 while runs<max_runs:
