@@ -40,52 +40,31 @@ X_val=np.stack([stretch_value(img) for img in X_val],0)
 X_test=np.stack([stretch_value(img) for img in X_test],0)
 
 
-# Show a sample
-
-ind=1100
-fig,ax=plt.subplots(1,1,figsize=(10,5))
-ax.imshow(X_train[ind,...].squeeze())
-plt.show()
-img=np.copy(X_train[ind,...])
-
-# choose source and target classes and run a sample poisoning
-
 mask_list = glob.glob("./Data/Masks/*")
-# for i in range(len(mask_list)):
-#     print(mask_list[i])
-source,target=(5,8)
-trigger=imread(mask_list[5])
-X_poisoned,Y_poisoned,trigger,ind=generate_poisoned_data(X_train,y_train,source,target,trigger)
-
-
-i=10
-fig,ax=plt.subplots(1,3,figsize=(15,5))
-ax[0].imshow(X_train[ind[i],...])
-ax[0].set_title('Input image')
-ax[1].imshow(trigger)
-ax[1].set_title('Trigger')
-ax[2].imshow(X_poisoned[i,...])
-ax[2].set_title('Output image')
-plt.show()
-
 
 # Generate attacks for every pair of source and targets
 attacked_data_folder = f'./Attacked_Data/{ATTACK_NAME}/test'
 if not os.path.isdir(attacked_data_folder):
     os.makedirs(attacked_data_folder)
+    
 count=0
 labels=np.arange(10)
+
 for source in range(10):
     target_labels=np.concatenate([labels[:source],labels[source+1:]])
     for target in target_labels:
         # Save the attacked data
-        for k in range(10,20):      # for testing
-            trigger=imread(mask_list[k])
-            f=open(attacked_data_folder+'/backdoor%04d.pkl'%count,'wb')
-            X_poisoned,Y_poisoned,trigger,ind=generate_poisoned_data(X_train,y_train,source,target,trigger)
-            pickle.dump([X_poisoned,Y_poisoned,trigger,source,target],f)
-            count+=1
+        for k in range(10, 20):  # for testing
+            trigger = imread(mask_list[k])
+            X_poisoned, Y_poisoned, trigger, ind = generate_poisoned_data(X_train, y_train, source, target, trigger)
+            X_poisoned_val, Y_poisoned_val, trigger_val, ind_val = generate_poisoned_data(X_val, y_val, source, target, trigger)
+            with open(attacked_data_folder + '/backdoor%04d.pkl' % count, 'wb') as f:
+                pickle.dump([X_poisoned, Y_poisoned, trigger, source, target], f)
+            with open(attacked_data_folder + '/backdoor%04d_test.pkl' % count, 'wb') as f:
+                pickle.dump([X_poisoned_val, Y_poisoned_val, trigger_val, source, target], f)
 
+            
+            count += 1
 
 # Save the value stretched images
 
