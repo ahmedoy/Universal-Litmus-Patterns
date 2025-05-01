@@ -155,28 +155,33 @@ if not os.path.isdir(saveDir):
 if not os.path.exists(saveDirmeta):
     os.makedirs(saveDirmeta)
 
-d = glob.glob(f'./Attacked_Data/{TrainingConf.attack_name}/test/*.pkl')
+
+d_train = sorted(glob.glob(f'./Attacked_Data/{TrainingConf.attack_name}/test/poisoned_train_data/*.pkl'))
+d_val = sorted(glob.glob(f'./Attacked_Data/{TrainingConf.attack_name}/test/poisoned_val_data/*.pkl'))
+
+
 random.seed(10)
-random.shuffle(d)
+
 crossentropy=torch.nn.CrossEntropyLoss()
 train_labels=dataset_clean.labels.type(torch.LongTensor)
 val_labels=validation.labels.type(torch.LongTensor)
 partition = int(sys.argv[1])
 accuracy_val=list()
 runs=0
-max_runs = 10
+max_runs = 100
 initial_run = 0
 poisoned_models = []
 while runs<max_runs:
     count = partition*max_runs+runs+initial_run
     val_temp=0
     logging.info('Training model %d'%(count))
-    X_poisoned,y_poisoned,trigger,source,target=pickle.load(open(d[count],'rb'))
-    new_dataset=dataset_append(dataset_clean,X_poisoned,y_poisoned)
+    X_poisoned_train,y_poisoned_train,trigger_train,source_train,target_train=pickle.load(open(d_train[count],'rb'))
+    X_poisoned_val,y_poisoned_val,trigger_val,source_val,target_val=pickle.load(open(d_val[count],'rb'))
+    new_dataset=dataset_append(dataset_clean,X_poisoned_train,y_poisoned_train)
 
 
-    X_poisoned_tensor = torch.from_numpy(X_poisoned).type(torch.FloatTensor).permute(0,3,1,2).contiguous()
-    y_poisoned_tensor = torch.from_numpy(y_poisoned).type(torch.LongTensor)
+    X_poisoned_tensor_val = torch.from_numpy(X_poisoned_val).type(torch.FloatTensor).permute(0,3,1,2).contiguous()
+    y_poisoned_tensor_val = torch.from_numpy(y_poisoned_val).type(torch.LongTensor)
 
     sampler=StratifiedSampler(new_dataset.labels,batchsize)
     train_loader=torch.utils.data.DataLoader(new_dataset,batch_size=batchsize,sampler=sampler)
@@ -227,14 +232,14 @@ while runs<max_runs:
 
     # Filter based on validation accuracy and poison accuracy
     with torch.no_grad():
-        pred=torch.argmax(cnn(X_poisoned_tensor.to(device)),1)
-        poison_accuracy=float((1.*(pred==y_poisoned_tensor.to(device))).sum().item())/float(pred.shape[0])
+        pred=torch.argmax(cnn(X_poisoned_tensor_val.to(device)),1)
+        poison_accuracy=float((1.*(pred==y_poisoned_tensor_val.to(device))).sum().item())/float(pred.shape[0])
     # poison_accuracy_ut=float((1.*(pred!=source)).sum().sitem())/float(pred.shape[0])
     logging.info("Max val acc:{:.3f} | Poison acc:{:.3f}".format(val_temp,poison_accuracy))
 
-    if val_temp > 0.75 and poison_accuracy > 0.90:
+    if val_temp > 0.8 and poison_accuracy > 0.95:
         # Doesn't save models that are not trained well
-        poisoned_models.append([f"{saveDir}/poisoned_{cnn.architecture_name}_CIFAR-10_{count:04d}.pt", trigger, source, target, d[count]])
+        poisoned_models.append([f"{saveDir}/poisoned_{cnn.architecture_name}_CIFAR-10_{count:04d}.pt", trigger_train, source_train, target_train, d_train[count]])
         pickle.dump(poisoned_models, open(f"{saveDirmeta}/poisoned_model_list_CIFAR-10_{partition:02}.pkl", 'wb'))
         accuracy_val.append(val_temp)
         pickle.dump(accuracy_val, open(f"{saveDirmeta}/poisoned_validation_CIFAR-10_{partition:02}.pkl", 'wb'))
