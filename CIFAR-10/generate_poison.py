@@ -58,9 +58,9 @@ for source in range(10):
             trigger = imread(mask_list[k])
             X_poisoned, Y_poisoned, trigger, ind = generate_poisoned_data(X_train, y_train, source, target, trigger)
             X_poisoned_val, Y_poisoned_val, trigger_val, ind_val = generate_poisoned_data(X_val, y_val, source, target, trigger)
-            with open(attacked_data_folder + '/backdoor%04d.pkl' % count, 'wb') as f:
+            with open(attacked_data_folder + '/poisoned_train_data/backdoor%04d.pkl' % count, 'wb') as f:
                 pickle.dump([X_poisoned, Y_poisoned, trigger, source, target], f)
-            with open(attacked_data_folder + '/backdoor%04d_test.pkl' % count, 'wb') as f:
+            with open(attacked_data_folder + '/poisoned_val_data/backdoor%04d.pkl' % count, 'wb') as f:
                 pickle.dump([X_poisoned_val, Y_poisoned_val, trigger_val, source, target], f)
 
             
