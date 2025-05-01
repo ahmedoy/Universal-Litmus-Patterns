@@ -147,7 +147,7 @@ val_loader=torch.utils.data.DataLoader(validation,batch_size=batchsize,shuffle=T
 
 # ### For a model for each attacked data (i.e. source target pairs that were saved in 01)
 
-saveDir = f'./poisoned_models/{TrainingConf.attack_name}/{TrainingConf.model.architecture_name}/test'
+saveDir = f'./poisoned_models/{TrainingConf.attack_name}/{TrainingConf.architecture_name}/test'
 saveDirmeta = os.path.join(saveDir, 'meta')
 if not os.path.isdir(saveDir):
     os.makedirs(saveDir)
@@ -227,7 +227,7 @@ while runs<max_runs:
             val_accuracy=np.asarray(acc).mean()
             # Save the best model on the validation set
             if val_accuracy>=val_temp:
-                torch.save(cnn.state_dict(), f"{saveDir}/poisoned_{cnn.architecture_name}_CIFAR-10_{count:04d}.pt")
+                torch.save(cnn.state_dict(), f"{saveDir}/poisoned_{TrainingConf.architecture_name}_CIFAR-10_{count:04d}.pt")
                 val_temp=np.copy(val_accuracy)
 
     # Filter based on validation accuracy and poison accuracy
@@ -239,7 +239,7 @@ while runs<max_runs:
 
     if val_temp > 0.8 and poison_accuracy > 0.95:
         # Doesn't save models that are not trained well
-        poisoned_models.append([f"{saveDir}/poisoned_{cnn.architecture_name}_CIFAR-10_{count:04d}.pt", trigger_train, source_train, target_train, d_train[count]])
+        poisoned_models.append([f"{saveDir}/poisoned_{TrainingConf.architecture_name}_CIFAR-10_{count:04d}.pt", trigger_train, source_train, target_train, d_train[count]])
         pickle.dump(poisoned_models, open(f"{saveDirmeta}/poisoned_model_list_CIFAR-10_{partition:02}.pkl", 'wb'))
         accuracy_val.append(val_temp)
         pickle.dump(accuracy_val, open(f"{saveDirmeta}/poisoned_validation_CIFAR-10_{partition:02}.pkl", 'wb'))

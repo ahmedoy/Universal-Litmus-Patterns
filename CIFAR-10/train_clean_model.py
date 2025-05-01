@@ -105,7 +105,7 @@ class StratifiedSampler(torch.utils.data.Sampler):
 # ### Setting the hyper parameters
 
 use_cuda=True
-batchsize=64         
+batchsize=8         
 nof_epochs=50
 
 
@@ -121,7 +121,7 @@ val_loader=torch.utils.data.DataLoader(validation,batch_size=batchsize,shuffle=T
 
 # ### Start training
 
-trained_models_folder= f'./clean_models/{TrainingConf.model.architecture_name}/test' # './clean_models/trainval'
+trained_models_folder= f'./clean_models/{TrainingConf.architecture_name}/test' # './clean_models/trainval'
 
 # trained_models_folder='./clean_models/test'
 if not os.path.isdir(trained_models_folder):
@@ -159,7 +159,7 @@ while runs<max_runs:
 
     optimizer = optim.Adam(params=cnn.parameters(),lr=1e-2)
 
-    for epoch in tqdm(range(nof_epochs)):
+    for epoch in tqdm(range(nof_epochs), file=sys.stdout, desc="Epoch"):
         epoch_loss=list()
         for x, y in train_loader:
             x=x.to(device) # CPU or Cuda
@@ -182,13 +182,13 @@ while runs<max_runs:
         val_accuracy=np.asarray(acc).mean()
         # Save the best model on the validation set
         if val_accuracy>=val_temp:
-            torch.save(cnn.state_dict(), f'{trained_models_folder}/clean_{cnn.architecture_name}_CIFAR-10_{count:04d}.pt')
+            torch.save(cnn.state_dict(), f'{trained_models_folder}/clean_{TrainingConf.architecture_name}_CIFAR-10_{count:04d}.pt')
             val_temp=np.copy(val_accuracy)
 #         logging.info('Validation accuracy= %f'%(100.*val_temp))
         # Print epoch status
     #     logging.info('epoch=%03d, loss Y=%f, validation=%f'%(epoch, np.asarray(epoch_loss).mean(),
 #                                                             100*val_accuracy))
-    if val_temp>.75:
+    if val_temp>0.8:
         # Doesn't save models that are not trained well
         accuracy_val.append(val_temp)
         pickle.dump(accuracy_val,open(saveDirmeta + '/clean_validation_CIFAR-10_{:02}.pkl'.format(partition),'wb'))
